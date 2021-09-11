@@ -9,35 +9,12 @@ const cors = require('cors');
 const app = express();
 const apiPort = 5000;
 
-const { MongoClient } = require('mongodb');
-const uri = "mongodb+srv://travis1:travis99@cluster0.z0l64.mongodb.net/Cluster0?retryWrites=true&w=majority";
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
+// Custome class that carries login details and handles opening/closing DB connection
+const { Client } = require('./mongoclient.js');
+let client = new Client();
 
 // MongoDB Functions
-
-// Connect to MongoDB with an async function
-async function mongoConnect(action = new Action()) {
-    if (action.type === "Close") {
-        return false;
-    }
-
-    console.log("Opening connection...");
-    await client.connect().then((res) => console.log("Connected\n")).catch(err => console.log(err));
-    //databasesList = await client.db().admin().listDatabases();
-    //listDatabasesToConsole(databasesList);
-
-    let output = "";
-    //output = await action.func(client);
-    output = await action.func(client, action.data);
-
-    console.log("Closing connection...");
-    await client.close().then(console.log("Closed\n")).catch(err => console.log(err));
-
-    return output;
-}
-
-// TODO: enclose functions in Classes
+// TODO: enclose functions in Classes / A class
 async function createListing(client, newListing){
     const result = await client.db("sample_airbnb").collection("listingsAndReviews").insertOne(newListing);
     console.log(`New listing created with the following id: ${result.insertedId}`);
@@ -112,9 +89,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/mongo', (req, res) => {
-    res.send("mongoConnect()");
-    // Runs with default Action , does nothing and closes
-    mongoConnect(new Action());
+    res.send("You've reached /mongo");
 });
 
 // Note the use of 'async' in the callback
@@ -123,13 +98,10 @@ app.post('/colorpost', async (req, res) => {
     //console.log("Type of request.body: ", typeof req.body) // Object
     // TODO: server side validation
 
-    let colorData = new Action
-    ({ 
-        type: "saveColorData", 
-        func: saveColorData, 
-        data: req.body 
-    })
-    let attempt = await mongoConnect(colorData)
+    await client.connect();
+    let attempt = await saveColorData(client.client,req.body);
+    client.close();
+
     console.log("Success? : ", attempt); //bool
 
     if (attempt) {
@@ -143,42 +115,27 @@ app.get('/readlisting', async (req, res) => {
     // To use the id parameter, do this: 
     // http://localhost:5000/readlisting?id=10006546
     // Sample ID: 10006546
+    let query = {id: req.query.id}
 
-    let action = new Action
-    ({ 
-        type:"readListing", 
-        func: findOneListingByID,
-        // req.query accesses parsed request params 
-        data: {id: req.query.id} 
-    })
-    let attempt = await mongoConnect(action);
+    await client.connect();
+    let attempt = await findOneListingByID(client.client,query);
+    client.close();
+
     res.send(attempt);
 });
 
-app.get('/createlisting', (req, res) => {
+app.get('/createlisting', async (req, res) => {
     // todo: change this to a post request and use parameters in req to create the listing
+    let data = listingInfo;
+
+    await client.connect();
+    let attempt = await createListing(client.client,data);
+    client.close();
+
     res.send("listing");
-    updateInfo = new Action
-    ({ 
-        type: "createListing", 
-        func: createListing, 
-        data: listingInfo 
-    })
-    mongoConnect(updateInfo);
 });
 
-
 app.listen(apiPort, () => console.log(`Server running on port ${apiPort} \n`));
-
-
-// Helper Classes
-class Action {
-    constructor(props = {}) {
-        this.type = props.type || "Close"; // Default Action object causes mongoConnect to return immediately
-        this.func = props.func || function(...args) {};
-        this.data = props.data || {};
-    }
-}
 
 // Test data
 let listingInfo = {
@@ -187,10 +144,3 @@ let listingInfo = {
     bedrooms: 1,
     bathrooms: 1
 };
-
-// Connect to MongoDB using the code MongoDB suggests
-// client.connect(err => {
-//   const collection = client.db("test").collection("devices");
-//   // perform actions on the collection object
-//   client.close();
-// });
