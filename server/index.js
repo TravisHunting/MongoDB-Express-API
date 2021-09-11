@@ -147,7 +147,8 @@ app.get('/readlisting', async (req, res) => {
     let action = new Action
     ({ 
         type:"readListing", 
-        func: findOneListingByID, 
+        func: findOneListingByID,
+        // req.query accesses parsed request params 
         data: {id: req.query.id} 
     })
     let attempt = await mongoConnect(action);
