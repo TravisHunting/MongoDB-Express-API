@@ -22,8 +22,8 @@ async function mongoConnect(action = new Action()) {
         return false;
     }
 
-    console.log("started.");
-    await client.connect().then((res) => console.log("Connected")).catch(err => console.log(err));
+    console.log("Opening connection...");
+    await client.connect().then((res) => console.log("Connected\n")).catch(err => console.log(err));
     //databasesList = await client.db().admin().listDatabases();
     //listDatabasesToConsole(databasesList);
 
@@ -31,8 +31,8 @@ async function mongoConnect(action = new Action()) {
     //output = await action.func(client);
     output = await action.func(client, action.data);
 
-    console.log("closing connection");
-    await client.close().catch(err => console.log(err));
+    console.log("Closing connection...");
+    await client.close().then(console.log("Closed\n")).catch(err => console.log(err));
 
     return output;
 }
@@ -68,17 +68,18 @@ async function findOneListingByID(client, query) {
 }
 
 async function saveColorData(client, colorData) {
-    console.log("Entered saveColorData function with data:");
-    console.log(colorData);
+    console.log("Entered saveColorData function\n");
+    //console.log(colorData._id);
     let success = false;
     // TODO: Catch MongoServerError: E11000 duplicate key error in the catch statement below
 
-    await client.db("colordata").collection("rgb_palettes_2").insertOne(colorData)
+    await client.db("colordata").collection("rgb_palettes_3").insertOne(colorData)
         .then(function() {
-            console.log("Inserted");
+            console.log("Inserted\n");
             success = true;
         }).catch(function(err) { 
-            console.log(err);
+            console.log("Insertion failed:");
+            console.log(err.message + "\n");
             return false;
         });
 
@@ -86,7 +87,7 @@ async function saveColorData(client, colorData) {
 }
 
 function preloadAsyncFunction(funcToLoad, data) {
-    // Currys an async function so that it can be called with only a 'client' parameter
+    // Curries an async function so that it can be called with only a 'client' parameter
     // let colorData = new Action({ type: "saveColorData", func: preloadAsyncFunction(saveColorData, req.body) })
     // action.func(client)
     return async function(client) { 
@@ -118,8 +119,8 @@ app.get('/mongo', (req, res) => {
 
 // Note the use of 'async' in the callback
 app.post('/colorpost', async (req, res) => {
-    console.log("Request body: ", req.body);
-    console.log("Type of request.body: ", typeof req.body) // Object
+    console.log("Request id: " + req.body._id + "\n");
+    //console.log("Type of request.body: ", typeof req.body) // Object
     // TODO: server side validation
 
     let colorData = new Action
@@ -166,7 +167,7 @@ app.get('/createlisting', (req, res) => {
 });
 
 
-app.listen(apiPort, () => console.log(`Server running on port ${apiPort}`));
+app.listen(apiPort, () => console.log(`Server running on port ${apiPort} \n`));
 
 
 // Helper Classes
