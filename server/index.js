@@ -18,31 +18,20 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 // Connect to MongoDB with an async function
 async function mongoConnect(action = new Action()) {
+    if (action.type === "Close") {
+        return false;
+    }
+
     console.log("started.");
-    await client.connect().then((res) => console.log("Connection response:", res)).catch(err => console.log(err));
-    databasesList = await client.db().admin().listDatabases();
+    await client.connect().then((res) => console.log("Connected")).catch(err => console.log(err));
+    //databasesList = await client.db().admin().listDatabases();
     //listDatabasesToConsole(databasesList);
 
     let output = "";
-    switch (action.type) {
-        case "createListing":
-            console.log("Attempting to create listing");
-            console.log(action.data.listing)
-            await createListing(client,action.data.listing)
-            break;   
-        case "readListing":
-            console.log("Attempting to read listing");
-            console.log(action.query)
-            await findOneListingByID(client, action.query);
-            break;
-        case "saveColorData":
-            console.log("Attempting to save color data");
-            output = await saveColorData(client, action.data);
-            break;
-        default:
-            break;
-    }
+    //output = await action.func(client);
+    output = await action.func(client, action.data);
 
+    console.log("closing connection");
     await client.close().catch(err => console.log(err));
 
     return output;
@@ -71,8 +60,10 @@ async function findOneListingByID(client, query) {
     if (result) {
         console.log(`Found a listing in the collection with the id '${query.id}':`);
         console.log(result);
+        return true;
     } else {
         console.log(`No listings found with the id '${query.id}'`);
+        return false;
     }
 }
 
@@ -86,9 +77,22 @@ async function saveColorData(client, colorData) {
         .then(function() {
             console.log("Inserted");
             success = true;
-        }).catch((err) => console.log(err));
+        }).catch(function(err) { 
+            console.log(err);
+            return false;
+        });
 
     return success;
+}
+
+function preloadAsyncFunction(funcToLoad, data) {
+    // Currys an async function so that it can be called with only a 'client' parameter
+    // let colorData = new Action({ type: "saveColorData", func: preloadAsyncFunction(saveColorData, req.body) })
+    // action.func(client)
+    return async function(client) { 
+        let output = await funcToLoad(client, data);
+        return output; 
+    }
 }
 
 // Express Setup
@@ -114,14 +118,13 @@ app.get('/mongo', (req, res) => {
 
 // Note the use of 'async' in the callback
 app.post('/colorpost', async (req, res) => {
-    console.log(req.body);
-    console.log(typeof req.body) // Object
+    console.log("Request body: ", req.body);
+    console.log("Type of request.body: ", typeof req.body) // Object
     // TODO: server side validation
 
-    let colorData = new Action({type: "saveColorData",  data: req.body })
+    let colorData = new Action({ type: "saveColorData", func: saveColorData, data: req.body })
     let attempt = await mongoConnect(colorData)
-    console.log("logging attempt variable (success):");
-    console.log(attempt); //bool
+    console.log("Success? : ", attempt); //bool
 
     if (attempt) {
         res.send({body:"Successfully saved"});
@@ -133,13 +136,14 @@ app.post('/colorpost', async (req, res) => {
 app.get('/readlisting', (req, res) => {
     // todo: add id param at end of /readlisting url and feed that param into the query
     res.send("reading airbnb reviews");
-    mongoConnect(new Action({type:"readListing", query: {id: '10006546'}}));
+    let query = {id: '10006546'}
+    mongoConnect(new Action({ type:"readListing", func: findOneListingByID, data: query }));
 });
 
 app.get('/createlisting', (req, res) => {
     // todo: change this to a post request and use parameters in req to create the listing
     res.send("listing");
-    updateInfo = new Action("createListing", { listing: listingInfo })
+    updateInfo = new Action({ type: "createListing", func: createListing, data: listingInfo })
     mongoConnect(updateInfo);
 });
 
@@ -150,15 +154,9 @@ app.listen(apiPort, () => console.log(`Server running on port ${apiPort}`));
 // Helper Classes
 class Action {
     constructor(props = {}) {
-        this.type = props.type || "Close";
+        this.type = props.type || "Close"; // Default Action object causes mongoConnect to return immediately
+        this.func = props.func || function(...args) {};
         this.data = props.data || {};
-        this.query = props.query || new Query();
-    }
-}
-
-class Query {
-    constructor(props = {}) {
-        this.id = props.id || "";
     }
 }
 
