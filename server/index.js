@@ -73,7 +73,7 @@ async function saveColorData(client, colorData) {
     let success = false;
     // TODO: Catch MongoServerError: E11000 duplicate key error in the catch statement below
 
-    await client.db("colordata").collection("rgb_palettes").insertOne(colorData)
+    await client.db("colordata").collection("rgb_palettes_2").insertOne(colorData)
         .then(function() {
             console.log("Inserted");
             success = true;
@@ -132,9 +132,9 @@ app.post('/colorpost', async (req, res) => {
     console.log("Success? : ", attempt); //bool
 
     if (attempt) {
-        res.send({body:"Successfully saved"});
+        res.send({body:"Successfully saved",success: true});
     } else {
-        res.send({body:"Data was not saved"});
+        res.send({body:"Data was not saved", success: false});
     }
 });
 
