@@ -3,8 +3,8 @@
 // https://www.mongodb.com/developer/quickstart/node-crud-tutorial/
 
 const express = require('express');
-//const bodyParser = require('body-parser');
-//const cors = require('cors');
+//const bodyParser = require('body-parser'); // Deprecated, use express.urlencoded
+const cors = require('cors');
 
 const app = express();
 const apiPort = 5000;
@@ -19,10 +19,11 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 // Connect to MongoDB with an async function
 async function mongoConnect(action = new Action()) {
     console.log("started.");
-    await client.connect().then(console.log("connect 'then' happened")).catch(err => console.log(err));
+    await client.connect().then((res) => console.log("Connection response:", res)).catch(err => console.log(err));
     databasesList = await client.db().admin().listDatabases();
     //listDatabasesToConsole(databasesList);
 
+    let output = "";
     switch (action.type) {
         case "createListing":
             console.log("Attempting to create listing");
@@ -34,13 +35,20 @@ async function mongoConnect(action = new Action()) {
             console.log(action.query)
             await findOneListingByID(client, action.query);
             break;
+        case "saveColorData":
+            console.log("Attempting to save color data");
+            output = await saveColorData(client, action.data);
+            break;
         default:
             break;
     }
 
     await client.close().catch(err => console.log(err));
+
+    return output;
 }
 
+// TODO: enclose functions in Classes
 async function createListing(client, newListing){
     const result = await client.db("sample_airbnb").collection("listingsAndReviews").insertOne(newListing);
     console.log(`New listing created with the following id: ${result.insertedId}`);
@@ -68,12 +76,31 @@ async function findOneListingByID(client, query) {
     }
 }
 
+async function saveColorData(client, colorData) {
+    console.log("Entered saveColorData function with data:");
+    console.log(colorData);
+    let success = false;
+    // TODO: Catch MongoServerError: E11000 duplicate key error in the catch statement below
+
+    await client.db("colordata").collection("rgb_palettes").insertOne(colorData)
+        .then(function() {
+            console.log("Inserted");
+            success = true;
+        }).catch((err) => console.log(err));
+
+    return success;
+}
 
 // Express Setup
 
 // Alternative to bodyParser is now included in express
 //app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
+// Necessary to recognize incoming JSON data
+app.use(express.json());
+
+// Allow cross origin requests
+app.use(cors());
 
 app.get('/', (req, res) => {
     res.send(" '/' reached");
@@ -83,6 +110,24 @@ app.get('/mongo', (req, res) => {
     res.send("mongoConnect()");
     // Runs with default Action , does nothing and closes
     mongoConnect(new Action());
+});
+
+// Note the use of 'async' in the callback
+app.post('/colorpost', async (req, res) => {
+    console.log(req.body);
+    console.log(typeof req.body) // Object
+    // TODO: server side validation
+
+    let colorData = new Action({type: "saveColorData",  data: req.body })
+    let attempt = await mongoConnect(colorData)
+    console.log("logging attempt variable (success):");
+    console.log(attempt); //bool
+
+    if (attempt) {
+        res.send({body:"Successfully saved"});
+    } else {
+        res.send({body:"Data was not saved"});
+    }
 });
 
 app.get('/readlisting', (req, res) => {
@@ -98,11 +143,11 @@ app.get('/createlisting', (req, res) => {
     mongoConnect(updateInfo);
 });
 
+
 app.listen(apiPort, () => console.log(`Server running on port ${apiPort}`));
 
 
 // Helper Classes
-
 class Action {
     constructor(props = {}) {
         this.type = props.type || "Close";
