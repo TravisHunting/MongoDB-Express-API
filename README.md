@@ -7,14 +7,23 @@ https://www.mongodb.com/developer/quickstart/node-crud-tutorial/ <br>
 
 # Notes
 
-Entry point: index.js
+Entry point: index.js <br>
 App runs on port 5000
 
 # Using the mongoConnect function
 
-First create an Action object. Make sure to define its 'type' (currently arbitrary except for "Close")
+First, create an Action object. Make sure to define its 'type' (currently arbitrary except for "Close")
 Define Action.func as the function you will be calling
 Define Action.data as the data that will be passed into Action.func
 Pass your Action into mongoConnect. 
 
 mongoConnect will then attempt to open a connection to the database, then run your specified function with the data you have chosen.
+
+let myAction = new Action
+({ 
+    type: "createListing", 
+    func: createListing, 
+    data: listingInfo 
+})
+
+" await myAction.func(myAction.data) " will be run.  

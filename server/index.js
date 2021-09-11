@@ -60,7 +60,7 @@ async function findOneListingByID(client, query) {
     if (result) {
         console.log(`Found a listing in the collection with the id '${query.id}':`);
         console.log(result);
-        return true;
+        return result;
     } else {
         console.log(`No listings found with the id '${query.id}'`);
         return false;
@@ -122,7 +122,12 @@ app.post('/colorpost', async (req, res) => {
     console.log("Type of request.body: ", typeof req.body) // Object
     // TODO: server side validation
 
-    let colorData = new Action({ type: "saveColorData", func: saveColorData, data: req.body })
+    let colorData = new Action
+    ({ 
+        type: "saveColorData", 
+        func: saveColorData, 
+        data: req.body 
+    })
     let attempt = await mongoConnect(colorData)
     console.log("Success? : ", attempt); //bool
 
@@ -133,17 +138,30 @@ app.post('/colorpost', async (req, res) => {
     }
 });
 
-app.get('/readlisting', (req, res) => {
-    // todo: add id param at end of /readlisting url and feed that param into the query
-    res.send("reading airbnb reviews");
-    let query = {id: '10006546'}
-    mongoConnect(new Action({ type:"readListing", func: findOneListingByID, data: query }));
+app.get('/readlisting', async (req, res) => {
+    // To use the id parameter, do this: 
+    // http://localhost:5000/readlisting?id=10006546
+    // Sample ID: 10006546
+
+    let action = new Action
+    ({ 
+        type:"readListing", 
+        func: findOneListingByID, 
+        data: {id: req.query.id} 
+    })
+    let attempt = await mongoConnect(action);
+    res.send(attempt);
 });
 
 app.get('/createlisting', (req, res) => {
     // todo: change this to a post request and use parameters in req to create the listing
     res.send("listing");
-    updateInfo = new Action({ type: "createListing", func: createListing, data: listingInfo })
+    updateInfo = new Action
+    ({ 
+        type: "createListing", 
+        func: createListing, 
+        data: listingInfo 
+    })
     mongoConnect(updateInfo);
 });
 
