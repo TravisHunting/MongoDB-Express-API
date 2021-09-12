@@ -31,9 +31,6 @@ class Client {
 // Note the following syntax for exports
 module.exports.Client = Client;
 
-
-
-
 // Connect to MongoDB using the code MongoDB suggests
 // client.connect(err => {
 //   const collection = client.db("test").collection("devices");

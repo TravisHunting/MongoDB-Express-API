@@ -1,20 +1,14 @@
-// https://medium.com/swlh/how-to-create-your-first-mern-mongodb-express-js-react-js-and-node-js-stack-7e8b20463e66
-// https://www.mongodb.com/blog/post/quick-start-nodejs-mongodb--how-to-get-connected-to-your-database
-// https://www.mongodb.com/developer/quickstart/node-crud-tutorial/
-
 const express = require('express');
-//const bodyParser = require('body-parser'); // Deprecated, use express.urlencoded
 const cors = require('cors');
-
-const app = express();
-const apiPort = 5000;
-
-// Custome class that carries login details and handles opening/closing DB connection
+// Custom class that carries login details and handles opening/closing DB connection
 const { Client } = require('./mongoclient.js');
+
+const apiPort = 5000;
+const app = express();
 let client = new Client();
 
 // MongoDB Functions
-// TODO: enclose functions in Classes / A class
+// TODO: enclose functions in a class / classes
 async function createListing(client, newListing){
     const result = await client.db("sample_airbnb").collection("listingsAndReviews").insertOne(newListing);
     console.log(`New listing created with the following id: ${result.insertedId}`);
@@ -22,9 +16,12 @@ async function createListing(client, newListing){
 }
 
 async function readAllListings(client, query = {}){
+    // TODO - Fix this function so it actually returns the entire collection
     console.log("Reading all listings");
-    const result = await client.db("sample_airbnb").collection("listingsAndReviews").findOne({});
-    console.log(result);
+    //result = await client.db("sample_airbnb").collection("listingsAndReviews").findOne(query)
+    //.catch(err => result = err.message);
+    result = await client.db("sample_airbnb").collection("listingsAndReviews").find(query);//.catch(err => result = err.message);
+    return result;    
 }
 
 function listDatabasesToConsole(databasesList) {
@@ -74,8 +71,8 @@ function preloadAsyncFunction(funcToLoad, data) {
 }
 
 // Express Setup
-
 // Alternative to bodyParser is now included in express
+//const bodyParser = require('body-parser'); // Deprecated, use express.urlencoded
 //app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 // Necessary to recognize incoming JSON data
@@ -115,12 +112,20 @@ app.get('/readlisting', async (req, res) => {
     // To use the id parameter, do this: 
     // http://localhost:5000/readlisting?id=10006546
     // Sample ID: 10006546
+    // request method 'query.x' allows access to the parsed URL parameter
     let query = {id: req.query.id}
 
     await client.connect();
     let attempt = await findOneListingByID(client.client,query);
     client.close();
 
+    res.send(attempt);
+});
+
+app.get('/everylisting', async (req, res) => {
+    await client.connect();
+    let attempt = await readAllListings(client.client);
+    client.close();
     res.send(attempt);
 });
 
