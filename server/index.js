@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 // Custom class that carries login details and handles opening/closing DB connection
-const { Client } = require('./mongoclient.js');
+const { Client } = require('./MongoClient.js');
 
 const apiPort = 5000;
 const app = express();
