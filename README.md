@@ -11,3 +11,4 @@ Entry point: index.js <br>
 App runs on port 5000 <br>
 Login details for mongodb are contained in "secrets.json" <br>
 Make sure to call client.close() after you are done with your database operations. <br>
+The databases and collections used in the server are MongoDB sample data. You can easily load these sample databases when creating a new free MongoDB Atlas Cluster.

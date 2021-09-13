@@ -2,6 +2,7 @@ const { MongoClient } = require('mongodb');
 
 // Read Database Login info from "secrets.json" file
 const fs = require('fs');
+// This can happen synchronously because it only happens on startup
 let rawdata = fs.readFileSync('../secrets.json');
 let logindetails = JSON.parse(rawdata);
 
