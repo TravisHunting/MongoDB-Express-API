@@ -1,8 +1,14 @@
 const { MongoClient } = require('mongodb');
 
+// Read Database Login info from "secrets.json" file
+const fs = require('fs');
+let rawdata = fs.readFileSync('../secrets.json');
+let logindetails = JSON.parse(rawdata);
+
+
 class Client {
     constructor(props = {}) {
-        this.uri = props.uri || "mongodb+srv://travis1:travis99@cluster0.z0l64.mongodb.net/Cluster0?retryWrites=true&w=majority";
+        this.uri = props.uri || logindetails.uri;
         this.client = new MongoClient(this.uri, { useNewUrlParser: true, useUnifiedTopology: true });
     }
 
